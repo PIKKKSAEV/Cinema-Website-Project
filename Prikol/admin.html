@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель администратора</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .login-form, .bookings-table {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .login-form h2, .bookings-table h2 {
+            margin-top: 0;
+        }
+        .login-form input[type="text"], .login-form input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .login-form button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            border: none;
+            color: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .login-form button:hover {
+            background-color: #0056b3;
+        }
+        .bookings-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .bookings-table table, .bookings-table th, .bookings-table td {
+            border: 1px solid #ddd;
+        }
+        .bookings-table th, .bookings-table td {
+            padding: 10px;
+            text-align: left;
+        }
+        .bookings-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-form" id="login-form">
+            <h2>Вход администратора</h2>
+            <form id="admin-login-form">
+                <input type="text" id="username" name="username" placeholder="Имя пользователя" required>
+                <input type="password" id="password" name="password" placeholder="Пароль" required>
+                <button type="submit">Войти</button>
+            </form>
+            <div id="login-message"></div>
+        </div>
+
+        <div class="bookings-table" id="bookings-table" style="display: none;">
+            <h2>Список бронирований</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя пользователя</th>
+                        <th>Идентификатор фильма</th>
+                        <th>Номер места</th>
+                        <th>Время бронирования</th>
+                    </tr>
+                </thead>
+                <tbody id="bookings-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('admin-login-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const response = await fetch('/admin/login', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(username + ':' + password)
+                }
+            });
+
+            const message = document.getElementById('login-message');
+
+            if (response.ok) {
+                message.textContent = 'Успешный вход!';
+                message.style.color = 'green';
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('bookings-table').style.display = 'block';
+                loadBookings(username, password);
+            } else {
+                message.textContent = 'Неверное имя пользователя или пароль.';
+                message.style.color = 'red';
+            }
+        });
+
+        async function loadBookings(username, password) {
+            const response = await fetch('/admin/bookings', {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(username + ':' + password)
+                }
+            });
+
+            if (response.ok) {
+                const bookings = await response.json();
+                const bookingsBody = document.getElementById('bookings-body');
+                bookingsBody.innerHTML = '';
+                bookings.forEach(booking => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${booking.id}</td>
+                        <td>${booking.username}</td>
+                        <td>${booking.movie_id}</td>
+                        <td>${booking.seat_number}</td>
+                        <td>${booking.booking_time}</td>
+                    `;
+                    bookingsBody.appendChild(row);
+                });
+            } else {
+                document.getElementById('login-message').textContent = 'Не удалось загрузить бронирования.';
+                document.getElementById('login-message').style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>

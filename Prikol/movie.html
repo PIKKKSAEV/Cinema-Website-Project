@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кинотеатр</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: url('https://source.unsplash.com/1600x900/?cinema') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+        }
+        .container {
+            padding-top: 50px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 30px;
+        }
+        .card {
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            color: black;
+        }
+        .seat {
+            width: 30px;
+            height: 30px;
+            margin: 5px;
+            background-color: #ddd;
+            border: 1px solid #444;
+            cursor: pointer;
+        }
+        .seat.selected {
+            background-color: #6c757d;
+        }
+        .seat.occupied {
+            background-color: #444;
+            cursor: not-allowed;
+        }
+        .seat-row {
+            display: flex;
+            justify-content: center;
+        }
+        .screen {
+            background-color: #444;
+            height: 50px;
+            width: 100%;
+            margin: 15px 0;
+            text-align: center;
+            color: white;
+            font-size: 20px;
+        }
+        .modal-content {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .alert {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="user-info">
+        <span id="username"></span>
+        <button id="logout" class="btn btn-danger">Выйти</button>
+    </div>
+    
+    <div class="container">
+        <h1 class="text-center">Добро пожаловать на сайт кинотеатра</h1>
+        <div class="alert alert-warning" id="loginAlert" style="display:none;">
+            Пожалуйста, войдите в систему для бронирования мест.
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Тайна Лунного Света</h5>
+                        <p class="card-text">Молодая девушка отправляется в мистическое путешествие, чтобы раскрыть тайну исчезновения своего брата.</p>
+                        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#bookingModal" data-movie-id="1">Забронировать</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="bookingModal" tabindex="-1" role="dialog" aria-labelledby="bookingModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bookingModalLabel">Выберите места и время</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="showtimeSelect">Выберите время сеанса:</label>
+                        <select class="form-control" id="showtimeSelect">
+                            <option value="10:00">10:00</option>
+                            <option value="13:00">13:00</option>
+                            <option value="16:00">16:00</option>
+                            <option value="19:00">19:00</option>
+                            <option value="22:00">22:00</option>
+                        </select>
+                    </div>
+                    <div class="screen">Экран</div>
+                    <div class="seat-row">
+                        <div class="seat" data-seat-number="A1"></div>
+                        <div class="seat" data-seat-number="A2"></div>
+                        <div class="seat" data-seat-number="A3"></div>
+                        <div class="seat" data-seat-number="A4"></div>
+                        <div class="seat" data-seat-number="A5"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-success" id="confirmBooking">Подтвердить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.9/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            function getCookie(name) {
+                var matches = document.cookie.match(new RegExp(
+                    "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+                ));
+                return matches ? decodeURIComponent(matches[1]) : undefined;
+            }
+            
+            $('#logout').click(function() {
+                document.cookie = 'session_id=; Path=http://localhost:8000/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = 'username=; Path=http://localhost:8000/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                window.location.href = 'http://localhost:8000/';
+            });
+
+            var selectedSeats = [];
+            var movieId = null;
+    
+            $('#bookingModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                movieId = button.data('movie-id');
+                selectedSeats = [];
+                $('.seat').removeClass('selected');
+            });
+    
+            $('.seat').click(function() {
+                if (!$(this).hasClass('occupied')) {
+                    $(this).toggleClass('selected');
+                    var seatNumber = $(this).data('seat-number');
+                    if ($(this).hasClass('selected')) {
+                        selectedSeats.push(seatNumber);
+                    } else {
+                        selectedSeats = selectedSeats.filter(function(value) {
+                            return value !== seatNumber;
+                        });
+                    }
+                }
+            });
+    
+            $('#confirmBooking').click(function() {
+                var booking_time = $('#showtimeSelect').val();
+                  
+                let sessionId = getCookie('session_id');
+                alert(sessionId);
+
+                console.log(booking_time);
+
+                $.ajax({
+                    url: "/book-seat/",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({ movie_id: movieId, seat_number: selectedSeats.join(','), booking_time: booking_time }),
+                    headers: {
+                        "Authorization": sessionId
+                    },
+                    success: function(response) {
+                       alert('Бронирование успешно!');
+                       $('#bookingModal').modal('hide');
+                    },
+                    error: function(xhr, status, error) {
+                       alert('Ошибка бронирования: ' + xhr.responseText);
+                    }
+                 });             
+            });
+        });
+    </script>
+</body>
+</html>
